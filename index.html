@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NỐI TỪ CÓ NGHĨA - 词语接龙</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #ffe6ea; /* Hồng pastel */
+            --primary-color: #ff6b81; /* Hồng đậm */
+            --secondary-color: #feca57; /* Vàng */
+            --success-color: #1dd1a1; /* Xanh mint */
+            --danger-color: #ff4757; /* Đỏ hồng */
+            --text-dark: #2f3542;
+            --text-light: #ffffff;
+            --tile-bg: #ffffff;
+            --tile-shadow: #ffc4cf;
+            --font-main: 'Nunito', sans-serif;
+            --font-hanzi: "KaiTi", "STKaiti", "楷体", serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg-color);
+            background-image: radial-gradient(circle at 20% 30%, rgba(255,255,255,0.4) 0%, transparent 50%),
+                              radial-gradient(circle at 80% 70%, rgba(255,255,255,0.4) 0%, transparent 50%);
+            color: var(--text-dark);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            background-color: var(--bg-color);
+        }
+        .screen.active { display: flex; }
+
+        .title-container { text-align: center; margin-bottom: 30px; animation: float 3s ease-in-out infinite; }
+        .main-title { font-size: clamp(2.5rem, 6vw, 4rem); color: var(--primary-color); font-weight: 900; text-shadow: 3px 3px 0px var(--text-light), 6px 6px 0px var(--tile-shadow); letter-spacing: 2px;}
+        .sub-title { font-size: clamp(1.2rem, 3vw, 1.8rem); color: var(--text-dark); font-weight: 700; margin-top: 10px; background: rgba(255,255,255,0.6); padding: 5px 20px; border-radius: 20px;}
+        .instruction { color: #576574; margin-top: 15px; font-weight: bold; }
+        .home-decor { font-size: 4rem; margin: 20px 0; }
+
+        .btn {
+            background-color: var(--primary-color);
+            color: var(--text-light);
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            font-weight: 900;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 8px 0px #d63031, 0 15px 20px rgba(255,107,129,0.4);
+            transition: all 0.1s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .btn:active { transform: translateY(8px); box-shadow: 0 0px 0px #d63031, 0 5px 10px rgba(255,107,129,0.4); }
+        .btn-secondary { background-color: var(--secondary-color); color: var(--text-dark); box-shadow: 0 8px 0px #e1b12c, 0 15px 20px rgba(254,202,87,0.4); }
+        .btn-secondary:active { box-shadow: 0 0px 0px #e1b12c, 0 5px 10px rgba(254,202,87,0.4); }
+        .btn-info { background-color: #48dbfb; color: var(--text-dark); box-shadow: 0 8px 0px #0abde3, 0 15px 20px rgba(72,219,251,0.4); }
+        .btn-info:active { box-shadow: 0 0px 0px #0abde3, 0 5px 10px rgba(72,219,251,0.4); }
+        .btn-small { padding: 10px 20px; font-size: 1rem; border-radius: 20px; box-shadow: 0 5px 0px rgba(0,0,0,0.2); }
+        .btn-small:active { transform: translateY(5px); box-shadow: 0 0px 0px rgba(0,0,0,0.2); }
+
+        .game-header {
+            width: 100%; max-width: 800px; padding: 15px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            background: rgba(255,255,255,0.8); border-radius: 0 0 20px 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); z-index: 5;
+        }
+        .stat-box { display: flex; flex-direction: column; align-items: center; }
+        .stat-label { font-size: 0.8rem; font-weight: bold; color: #8395a7; text-transform: uppercase;}
+        .stat-value { font-size: 1.5rem; font-weight: 900; color: var(--primary-color); }
+        .timer-value { color: var(--danger-color); }
+        .combo-value { color: var(--secondary-color); animation: pulse 1s infinite; }
+
+        .game-board-wrapper {
+            flex: 1; width: 100%; max-width: 800px; padding: 20px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        
+        .grid-board {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+            gap: 15px; width: 100%; max-width: 600px;
+            justify-content: center;
+        }
+
+        .tile {
+            background-color: var(--tile-bg);
+            border-radius: 15px;
+            aspect-ratio: 1;
+            display: flex; flex-direction: column; /* Xếp dọc: Pinyin trên, Hanzi dưới */
+            align-items: center; justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 6px 0px var(--tile-shadow);
+            transition: transform 0.1s, box-shadow 0.1s, background-color 0.3s;
+            position: relative;
+            border: 3px solid transparent;
+            padding: 5px;
+        }
+        @media (hover: hover) { .tile:hover { transform: translateY(-3px); box-shadow: 0 9px 0px var(--tile-shadow); } }
+        .tile:active { transform: translateY(6px); box-shadow: 0 0px 0px var(--tile-shadow); }
+        
+        .tile.selected {
+            background-color: #fff0f3;
+            border-color: var(--primary-color);
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 10px 15px rgba(255,107,129,0.3), 0 11px 0px var(--primary-color);
+        }
+        .tile.correct {
+            background-color: var(--success-color);
+            border-color: #10ac84; color: white;
+            animation: popOut 0.5s forwards;
+            pointer-events: none;
+        }
+        .tile.wrong {
+            background-color: var(--danger-color); color: white;
+            animation: shake 0.4s;
+        }
+        .tile.hinted {
+            animation: glowHint 1s infinite alternate;
+        }
+
+        .tile-pinyin { font-size: 1rem; color: #ff6b81; font-weight: 900; display: none; margin-bottom: 2px; line-height: 1;}
+        .tile-hanzi { font-family: var(--font-hanzi); font-size: clamp(2rem, 6vw, 3rem); font-weight: bold; line-height: 1; color: var(--text-dark);}
+        .tile.correct .tile-hanzi, .tile.wrong .tile-hanzi { color: white; }
+        .tile.correct .tile-pinyin, .tile.wrong .tile-pinyin { color: rgba(255,255,255,0.9); }
+        .show-pinyin .tile-pinyin { display: block; }
+
+        .game-controls {
+            width: 100%; max-width: 800px; padding: 15px;
+            display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;
+            background: rgba(255,255,255,0.8); border-radius: 20px 20px 0 0;
+        }
+
+        #toast {
+            position: fixed; top: 30%; left: 50%; transform: translate(-50%, -50%) scale(0.5);
+            background: rgba(255,255,255,0.95); padding: 15px 30px; border-radius: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15); border: 3px solid var(--primary-color);
+            text-align: center; opacity: 0; pointer-events: none; z-index: 100;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        #toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        .toast-hanzi { font-family: var(--font-hanzi); font-size: 2.5rem; color: var(--primary-color); font-weight: bold; }
+        .toast-info { font-size: 1.2rem; font-weight: bold; color: var(--text-dark); }
+        .toast-meaning { color: var(--success-color); font-size: 1.1rem; }
+
+        .floating-score {
+            position: absolute; font-size: 2rem; font-weight: 900; color: var(--secondary-color);
+            text-shadow: 2px 2px 0px #fff; pointer-events: none; z-index: 50;
+            animation: floatUpFade 1s forwards;
+        }
+
+        .result-box, .dict-box {
+            background: white; padding: 30px; border-radius: 30px; width: 90%; max-width: 500px;
+            text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-height: 90vh; display: flex; flex-direction: column;
+        }
+        .dict-box { max-width: 700px; }
+        
+        .res-title { font-size: 2.5rem; color: var(--primary-color); margin-bottom: 10px; font-weight: 900;}
+        .res-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;}
+        .res-stat { background: var(--bg-color); padding: 10px; border-radius: 15px;}
+        
+        .review-list {
+            text-align: left; overflow-y: auto; flex: 1; padding: 10px; border: 2px dashed #f1f2f6; border-radius: 15px; margin-bottom: 20px;
+        }
+        
+        /* CSS cho Grid Từ điển */
+        .dict-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px;
+            overflow-y: auto; flex: 1; padding: 10px; border: 2px solid #f1f2f6; border-radius: 15px; margin-bottom: 20px; background: #fafbfc;
+        }
+        .dict-item {
+            background: white; border-radius: 10px; padding: 10px; text-align: center;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.05); border: 1px solid #ffe6ea;
+        }
+        .dict-item .d-hanzi { font-family: var(--font-hanzi); font-size: 1.8rem; font-weight: bold; color: var(--primary-color); display: block;}
+        .dict-item .d-pinyin { font-size: 0.9rem; color: #576574; font-weight: bold; display: block; margin: 5px 0;}
+        .dict-item .d-meaning { font-size: 0.85rem; color: var(--success-color); font-weight: bold;}
+
+        .review-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #f1f2f6;}
+        .r-hanzi { font-family: var(--font-hanzi); font-size: 1.5rem; font-weight: bold; color: var(--primary-color);}
+        .r-pinyin { font-size: 0.9rem; color: #576574;}
+        .r-meaning { font-weight: bold; color: var(--text-dark); text-align: right;}
+
+        .overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.9); z-index: 50; display: none;
+            flex-direction: column; align-items: center; justify-content: center;
+        }
+
+        /* Animations */
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px) rotate(-5deg); } 75% { transform: translateX(5px) rotate(5deg); } }
+        @keyframes popOut { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(0); opacity: 0; } }
+        @keyframes floatUpFade { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-50px) scale(1.5); } }
+        @keyframes glowHint { 0% { box-shadow: 0 0 5px var(--secondary-color); border-color: var(--secondary-color); } 100% { box-shadow: 0 0 20px var(--secondary-color); border-color: var(--secondary-color); background-color: #fff8e1;} }
+
+        @media (max-width: 600px) {
+            .grid-board { grid-template-columns: repeat(4, 1fr); gap: 10px; }
+            .tile-hanzi { font-size: 1.8rem; }
+            .btn { padding: 12px 20px; font-size: 1rem; }
+            .dict-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="screen-home" class="screen active">
+        <div class="title-container">
+            <h1 class="main-title">NỐI TỪ CÓ NGHĨA</h1>
+            <h2 class="sub-title">词语接龙 – HSK1 & 2</h2>
+            <p class="instruction" style="color: var(--primary-color);">Chọn hai chữ Hán để ghép thành một từ có nghĩa!</p>
+        </div>
+        <div class="home-decor">✨🐼🌸</div>
+        
+        <div style="display: flex; flex-direction: column; gap: 15px; align-items: center; width: 100%; max-width: 400px; padding: 0 20px;">
+            <button class="btn" style="width: 100%;" onclick="startGame()">▶ BẮT ĐẦU CHƠI</button>
+            <button class="btn btn-info" style="width: 100%;" onclick="showDictionary()">📚 KHO TỪ VỰNG</button>
+            <div style="display: flex; gap: 10px; width: 100%; justify-content: center; margin-top: 10px;">
+                <button class="btn btn-secondary btn-small" id="btn-toggle-sound-home" onclick="toggleSound()">🔊 Âm thanh</button>
+                <select id="time-setting" style="padding: 10px; border-radius: 20px; border: 2px solid var(--primary-color); outline: none; font-weight: bold; font-family: var(--font-main);">
+                    <option value="60">60 Giây</option>
+                    <option value="90">90 Giây</option>
+                    <option value="120" selected>120 Giây</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div id="screen-game" class="screen">
+        <div class="game-header">
+            <div class="stat-box">
+                <span class="stat-label">Thời gian</span>
+                <span class="stat-val timer-value" id="ui-time">120</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-label">Tiến độ</span>
+                <span class="stat-val" style="color: var(--success-color);" id="ui-progress">0/10</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-label">Điểm</span>
+                <span class="stat-val" id="ui-score">0</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-label">Combo</span>
+                <span class="stat-val combo-value" id="ui-combo">0</span>
+            </div>
+        </div>
+
+        <div class="game-board-wrapper">
+            <div class="grid-board" id="board">
+                <!-- Các ô chữ sẽ được gen vào đây -->
+            </div>
+        </div>
+
+        <div class="game-controls">
+            <button class="btn btn-secondary btn-small" onclick="useHint()">💡 Gợi ý</button>
+            <button class="btn btn-secondary btn-small" onclick="togglePause()">⏸ Tạm dừng</button>
+        </div>
+    </div>
+
+    <div id="screen-result" class="screen">
+        <div class="result-box">
+            <h1 class="res-title" id="res-title">太棒了！Tuyệt vời!</h1>
+            <p id="res-msg" style="color: #576574; font-weight: bold; margin-bottom: 20px;">Bạn là cao thủ từ vựng!</p>
+            
+            <div class="res-stats-grid">
+                <div class="res-stat"><span style="font-size: 0.8rem; color: #8395a7;">Tổng điểm</span><br><b style="font-size: 1.5rem; color: var(--primary-color);" id="res-score">0</b></div>
+                <div class="res-stat"><span style="font-size: 0.8rem; color: #8395a7;">Sai sót</span><br><b style="font-size: 1.5rem; color: var(--danger-color);" id="res-wrong">0</b></div>
+                <div class="res-stat"><span style="font-size: 0.8rem; color: #8395a7;">Max Combo</span><br><b style="font-size: 1.5rem; color: var(--secondary-color);" id="res-max-combo">0</b></div>
+                <div class="res-stat"><span style="font-size: 0.8rem; color: #8395a7;">Tỷ lệ</span><br><b style="font-size: 1.5rem; color: var(--success-color);" id="res-acc">100%</b></div>
+            </div>
+
+            <h3 style="text-align: left; font-size: 1rem; color: var(--primary-color); margin-bottom: 5px;">📚 Từ vựng vòng này:</h3>
+            <div class="review-list" id="review-list">
+                <!-- Danh sách từ chèn qua JS -->
+            </div>
+
+            <div style="display: flex; justify-content: center; gap: 10px;">
+                <button class="btn btn-small" onclick="startGame()">🔄 Chơi tiếp</button>
+                <button class="btn btn-secondary btn-small" onclick="showScreen('screen-home')">🏠 Trang chủ</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="screen-dictionary" class="screen">
+        <div class="dict-box">
+            <h1 class="res-title">📚 TỔNG HỢP TỪ VỰNG</h1>
+            <p style="color: #576574; font-weight: bold; margin-bottom: 10px;">
+                Danh sách <span id="total-dict-words" style="color: var(--primary-color); font-size: 1.2rem;">0</span> từ vựng HSK.
+            </p>
+            
+            <div class="dict-grid" id="dict-container">
+                <!-- Các thẻ từ điển gen vào đây -->
+            </div>
+
+            <div style="display: flex; justify-content: center; margin-top: 10px;">
+                <button class="btn btn-secondary" onclick="showScreen('screen-home')">🏠 Trở về Trang chủ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- OVERLAYS -->
+    <div class="overlay" id="pause-overlay">
+        <h1 style="color: var(--primary-color); font-size: 3rem; margin-bottom: 20px;">ĐÃ TẠM DỪNG</h1>
+        <button class="btn" onclick="togglePause()">▶ TIẾP TỤC</button>
+        <button class="btn btn-secondary" onclick="quitGame()" style="margin-top: 15px;">🏠 Thoát về Trang chủ</button>
+    </div>
+
+    <div id="toast">
+        <div class="toast-hanzi" id="toast-hz">学校</div>
+        <div class="toast-info" id="toast-py">xuéxiào</div>
+        <div class="toast-meaning" id="toast-vi">Trường học</div>
+    </div>
+
+    <script>
+        const masterVocabulary = [
+            { word: "电脑", parts: ["电", "脑"], pinyinParts: ["diàn", "nǎo"], pinyin: "diànnǎo", meaning: "Máy tính" },
+            { word: "天气", parts: ["天", "气"], pinyinParts: ["tiān", "qì"], pinyin: "tiānqì", meaning: "Thời tiết" },
+            { word: "北京", parts: ["北", "京"], pinyinParts: ["Běi", "jīng"], pinyin: "Běijīng", meaning: "Bắc Kinh" },
+            { word: "旅游", parts: ["旅", "游"], pinyinParts: ["lǚ", "yóu"], pinyin: "lǚyóu", meaning: "Du lịch" },
+            { word: "足球", parts: ["足", "球"], pinyinParts: ["zú", "qiú"], pinyin: "zúqiú", meaning: "Bóng đá" },
+            { word: "报纸", parts: ["报", "纸"], pinyinParts: ["bào", "zhǐ"], pinyin: "bàozhǐ", meaning: "Tờ báo" },
+            { word: "桌子", parts: ["桌", "子"], pinyinParts: ["zhuō", "zi"], pinyin: "zhuōzi", meaning: "Cái bàn" },
+            { word: "羊肉", parts: ["羊", "肉"], pinyinParts: ["yáng", "ròu"], pinyin: "yángròu", meaning: "Thịt cừu" },
+            { word: "电话", parts: ["电", "话"], pinyinParts: ["diàn", "huà"], pinyin: "diànhuà", meaning: "Điện thoại" },
+            { word: "飞机", parts: ["飞", "机"], pinyinParts: ["fēi", "jī"], pinyin: "fēijī", meaning: "Máy bay" },
+            { word: "已经", parts: ["已", "经"], pinyinParts: ["yǐ", "jīng"], pinyin: "yǐjīng", meaning: "Đã, rồi" },
+            { word: "现在", parts: ["现", "在"], pinyinParts: ["xiàn", "zài"], pinyin: "xiànzài", meaning: "Bây giờ" },
+            { word: "昨天", parts: ["昨", "天"], pinyinParts: ["zuó", "tiān"], pinyin: "zuótiān", meaning: "Hôm qua" },
+            { word: "上午", parts: ["上", "午"], pinyinParts: ["shàng", "wǔ"], pinyin: "shàngwǔ", meaning: "Buổi sáng" },
+            { word: "中午", parts: ["中", "午"], pinyinParts: ["zhōng", "wǔ"], pinyin: "zhōngwǔ", meaning: "Buổi trưa" },
+            { word: "衣服", parts: ["衣", "服"], pinyinParts: ["yī", "fu"], pinyin: "yīfu", meaning: "Quần áo" },
+            { word: "便宜", parts: ["便", "宜"], pinyinParts: ["pián", "yi"], pinyin: "piányi", meaning: "Rẻ" },
+            { word: "游泳", parts: ["游", "泳"], pinyinParts: ["yóu", "yǒng"], pinyin: "yóuyǒng", meaning: "Bơi lội" },
+            { word: "工作", parts: ["工", "作"], pinyinParts: ["gōng", "zuò"], pinyin: "gōngzuò", meaning: "Công việc" },
+            { word: "公司", parts: ["公", "司"], pinyinParts: ["gōng", "sī"], pinyin: "gōngsī", meaning: "Công ty" },
+            { word: "医院", parts: ["医", "院"], pinyinParts: ["yī", "yuàn"], pinyin: "yīyuàn", meaning: "Bệnh viện" },
+            { word: "饭店", parts: ["饭", "店"], pinyinParts: ["fàn", "diàn"], pinyin: "fàndiàn", meaning: "Nhà hàng" },
+            { word: "学校", parts: ["学", "校"], pinyinParts: ["xué", "xiào"], pinyin: "xuéxiào", meaning: "Trường học" },
+            { word: "房间", parts: ["房", "间"], pinyinParts: ["fáng", "jiān"], pinyin: "fángjiān", meaning: "Căn phòng" },
+            { word: "介绍", parts: ["介", "绍"], pinyinParts: ["jiè", "shào"], pinyin: "jièshào", meaning: "Giới thiệu" },
+            { word: "起床", parts: ["起", "床"], pinyinParts: ["qǐ", "chuáng"], pinyin: "qǐchuáng", meaning: "Thức dậy" },
+            { word: "睡觉", parts: ["睡", "觉"], pinyinParts: ["shuì", "jiào"], pinyin: "shuìjiào", meaning: "Đi ngủ" },
+            { word: "认识", parts: ["认", "识"], pinyinParts: ["rèn", "shi"], pinyin: "rènshi", meaning: "Quen biết" },
+            { word: "大学", parts: ["大", "学"], pinyinParts: ["dà", "xué"], pinyin: "dàxué", meaning: "Đại học" },
+            { word: "一起", parts: ["一", "起"], pinyinParts: ["yì", "qǐ"], pinyin: "yìqǐ", meaning: "Cùng nhau" },
+            { word: "高兴", parts: ["高", "兴"], pinyinParts: ["gāo", "xìng"], pinyin: "gāoxìng", meaning: "Vui vẻ" },
+            { word: "东西", parts: ["东", "西"], pinyinParts: ["dōng", "xi"], pinyin: "dōngxi", meaning: "Đồ vật" },
+            { word: "看见", parts: ["看", "见"], pinyinParts: ["kàn", "jiàn"], pinyin: "kànjiàn", meaning: "Nhìn thấy" },
+            { word: "先生", parts: ["先", "生"], pinyinParts: ["xiān", "sheng"], pinyin: "xiānsheng", meaning: "Tiên sinh/Ông" },
+            { word: "一些", parts: ["一", "些"], pinyinParts: ["yì", "xiē"], pinyin: "yìxiē", meaning: "Một vài/Một ít" },
+            { word: "一下", parts: ["一", "下"], pinyinParts: ["yí", "xià"], pinyin: "yíxià", meaning: "Một chút/Một lát" },
+            { word: "回来", parts: ["回", "来"], pinyinParts: ["huí", "lai"], pinyin: "huílai", meaning: "Trở về" },
+            { word: "出门", parts: ["出", "门"], pinyinParts: ["chū", "mén"], pinyin: "chūmén", meaning: "Ra khỏi cửa" },
+            { word: "出院", parts: ["出", "院"], pinyinParts: ["chū", "yuàn"], pinyin: "chūyuàn", meaning: "Xuất viện" },
+            { word: "牛奶", parts: ["牛", "奶"], pinyinParts: ["niú", "nǎi"], pinyin: "niúnǎi", meaning: "Sữa bò" },
+            { word: "你好", parts: ["你", "好"], pinyinParts: ["nǐ", "hǎo"], pinyin: "nǐhǎo", meaning: "Xin chào" },
+            { word: "同学", parts: ["同", "学"], pinyinParts: ["tóng", "xué"], pinyin: "tóngxué", meaning: "Bạn học" },
+            { word: "再见", parts: ["再", "见"], pinyinParts: ["zài", "jiàn"], pinyin: "zàijiàn", meaning: "Tạm biệt" },
+            { word: "朋友", parts: ["朋", "友"], pinyinParts: ["péng", "you"], pinyin: "péngyou", meaning: "Bạn bè" },
+            { word: "休息", parts: ["休", "息"], pinyinParts: ["xiū", "xi"], pinyin: "xiūxi", meaning: "Nghỉ ngơi" },
+            { word: "谢谢", parts: ["谢", "谢"], pinyinParts: ["xiè", "xie"], pinyin: "xièxie", meaning: "Cảm ơn" },
+            { word: "名字", parts: ["名", "字"], pinyinParts: ["míng", "zi"], pinyin: "míngzi", meaning: "Tên" },
+            { word: "什么", parts: ["什", "么"], pinyinParts: ["shén", "me"], pinyin: "shénme", meaning: "Cái gì" },
+            { word: "哪里", parts: ["哪", "里"], pinyinParts: ["nǎ", "li"], pinyin: "nǎli", meaning: "Ở đâu" },
+            { word: "英国", parts: ["英", "国"], pinyinParts: ["Yīng", "guó"], pinyin: "Yīngguó", meaning: "Nước Anh" },
+            { word: "日本", parts: ["日", "本"], pinyinParts: ["Rì", "běn"], pinyin: "Rìběn", meaning: "Nhật Bản" },
+            { word: "这里", parts: ["这", "里"], pinyinParts: ["zhè", "li"], pinyin: "zhèli", meaning: "Ở đây" },
+            { word: "那里", parts: ["那", "里"], pinyinParts: ["nà", "li"], pinyin: "nàli", meaning: "Ở kia" },
+            { word: "美国", parts: ["美", "国"], pinyinParts: ["Měi", "guó"], pinyin: "Měiguó", meaning: "Nước Mỹ" },
+            { word: "今年", parts: ["今", "年"], pinyinParts: ["jīn", "nián"], pinyin: "jīnnián", meaning: "Năm nay" },
+            { word: "去年", parts: ["去", "年"], pinyinParts: ["qù", "nián"], pinyin: "qùnián", meaning: "Năm ngoái" },
+            { word: "明年", parts: ["明", "年"], pinyinParts: ["míng", "nián"], pinyin: "míngnián", meaning: "Năm sau" },
+            { word: "明天", parts: ["明", "天"], pinyinParts: ["míng", "tiān"], pinyin: "míngtiān", meaning: "Ngày mai" },
+            { word: "女儿", parts: ["女", "儿"], pinyinParts: ["nǚ", "ér"], pinyin: "nǚ'ér", meaning: "Con gái" },
+            { word: "儿子", parts: ["儿", "子"], pinyinParts: ["ér", "zi"], pinyin: "érzi", meaning: "Con trai" },
+            { word: "多少", parts: ["多", "少"], pinyinParts: ["duō", "shao"], pinyin: "duōshao", meaning: "Bao nhiêu" },
+            { word: "汉字", parts: ["汉", "字"], pinyinParts: ["Hàn", "zì"], pinyin: "Hànzì", meaning: "Chữ Hán" },
+            { word: "怎么", parts: ["怎", "么"], pinyinParts: ["zěn", "me"], pinyin: "zěnme", meaning: "Thế nào/Sao lại" },
+            { word: "请问", parts: ["请", "问"], pinyinParts: ["qǐng", "wèn"], pinyin: "qǐngwèn", meaning: "Xin hỏi" },
+            { word: "星期", parts: ["星", "期"], pinyinParts: ["xīng", "qī"], pinyin: "xīngqī", meaning: "Thứ/Tuần" },
+            { word: "看书", parts: ["看", "书"], pinyinParts: ["kàn", "shū"], pinyin: "kànshū", meaning: "Đọc sách" },
+            { word: "商店", parts: ["商", "店"], pinyinParts: ["shāng", "diàn"], pinyin: "shāngdiàn", meaning: "Cửa hàng" },
+            { word: "可以", parts: ["可", "以"], pinyinParts: ["kě", "yǐ"], pinyin: "kěyǐ", meaning: "Có thể" },
+            { word: "可能", parts: ["可", "能"], pinyinParts: ["kě", "néng"], pinyin: "kěnéng", meaning: "Có lẽ/Có thể" },
+            { word: "请坐", parts: ["请", "坐"], pinyinParts: ["qǐng", "zuò"], pinyin: "qǐngzuò", meaning: "Mời ngồi" },
+            { word: "没有", parts: ["没", "有"], pinyinParts: ["méi", "yǒu"], pinyin: "méiyǒu", meaning: "Không có/Chưa" },
+            { word: "身体", parts: ["身", "体"], pinyinParts: ["shēn", "tǐ"], pinyin: "shēntǐ", meaning: "Cơ thể/Sức khỏe" },
+            { word: "下雨", parts: ["下", "雨"], pinyinParts: ["xià", "yǔ"], pinyin: "xiàyǔ", meaning: "Trời mưa" },
+            { word: "小姐", parts: ["小", "姐"], pinyinParts: ["xiǎo", "jiě"], pinyin: "xiǎojiě", meaning: "Cô gái/Tiểu thư" },
+            { word: "女士", parts: ["女", "士"], pinyinParts: ["nǚ", "shì"], pinyin: "nǚshì", meaning: "Quý cô/Phu nhân" },
+            { word: "一点", parts: ["一", "点"], pinyinParts: ["yì", "diǎn"], pinyin: "yìdiǎn", meaning: "Một chút" },
+            { word: "水果", parts: ["水", "果"], pinyinParts: ["shuǐ", "guǒ"], pinyin: "shuǐguǒ", meaning: "Hoa quả" },
+            { word: "不少", parts: ["不", "少"], pinyinParts: ["bù", "shǎo"], pinyin: "bùshǎo", meaning: "Không ít/Nhiều" },
+            { word: "开车", parts: ["开", "车"], pinyinParts: ["kāi", "chē"], pinyin: "kāichē", meaning: "Lái xe" },
+            { word: "分钟", parts: ["分", "钟"], pinyinParts: ["fēn", "zhōng"], pinyin: "fēnzhōng", meaning: "Phút" },
+            { word: "这些", parts: ["这", "些"], pinyinParts: ["zhè", "xiē"], pinyin: "zhèxiē", meaning: "Những cái này" },
+            { word: "漂亮", parts: ["漂", "亮"], pinyinParts: ["piào", "liang"], pinyin: "piàoliang", meaning: "Xinh đẹp" },
+            { word: "好看", parts: ["好", "看"], pinyinParts: ["hǎo", "kàn"], pinyin: "hǎokàn", meaning: "Đẹp/Hay" },
+            { word: "好吃", parts: ["好", "吃"], pinyinParts: ["hǎo", "chī"], pinyin: "hǎochī", meaning: "Ngon" },
+            { word: "小学", parts: ["小", "学"], pinyinParts: ["xiǎo", "xué"], pinyin: "xiǎoxué", meaning: "Tiểu học" },
+            { word: "高中", parts: ["高", "中"], pinyinParts: ["gāo", "zhōng"], pinyin: "gāozhōng", meaning: "Trung học phổ thông" },
+            { word: "初中", parts: ["初", "中"], pinyinParts: ["chū", "zhōng"], pinyin: "chūzhōng", meaning: "Trung học cơ sở" },
+            { word: "旅行", parts: ["旅", "行"], pinyinParts: ["lǚ", "xíng"], pinyin: "lǚxíng", meaning: "Du lịch" },
+            { word: "觉得", parts: ["觉", "得"], pinyinParts: ["jué", "de"], pinyin: "juéde", meaning: "Cảm thấy" },
+            { word: "运动", parts: ["运", "动"], pinyinParts: ["yùn", "dòng"], pinyin: "yùndòng", meaning: "Thể thao/Vận động" },
+            { word: "眼睛", parts: ["眼", "睛"], pinyinParts: ["yǎn", "jing"], pinyin: "yǎnjing", meaning: "Mắt" },
+            { word: "河内", parts: ["河", "内"], pinyinParts: ["Hé", "nèi"], pinyin: "Hénèi", meaning: "Hà Nội" },
+            { word: "岘港", parts: ["岘", "港"], pinyinParts: ["Xiàn", "gǎng"], pinyin: "Xiàngǎng", meaning: "Đà Nẵng" },
+            { word: "生病", parts: ["生", "病"], pinyinParts: ["shēng", "bìng"], pinyin: "shēngbìng", meaning: "Bị ốm" },
+            { word: "早上", parts: ["早", "上"], pinyinParts: ["zǎo", "shang"], pinyin: "zǎoshang", meaning: "Buổi sáng sớm" },
+            { word: "下午", parts: ["下", "午"], pinyinParts: ["xià", "wǔ"], pinyin: "xiàwǔ", meaning: "Buổi chiều" },
+            { word: "晚上", parts: ["晚", "上"], pinyinParts: ["wǎn", "shang"], pinyin: "wǎnshang", meaning: "Buổi tối" },
+            { word: "散步", parts: ["散", "步"], pinyinParts: ["sàn", "bù"], pinyin: "sànbù", meaning: "Đi dạo" },
+            { word: "跑步", parts: ["跑", "步"], pinyinParts: ["pǎo", "bù"], pinyin: "pǎobù", meaning: "Chạy bộ" },
+            { word: "入院", parts: ["入", "院"], pinyinParts: ["rù", "yuàn"], pinyin: "rùyuàn", meaning: "Nhập viện" },
+            { word: "身高", parts: ["身", "高"], pinyinParts: ["shēn", "gāo"], pinyin: "shēngāo", meaning: "Chiều cao" },
+            { word: "知道", parts: ["知", "道"], pinyinParts: ["zhī", "dào"], pinyin: "zhīdào", meaning: "Biết" },
+            { word: "时间", parts: ["时", "间"], pinyinParts: ["shí", "jiān"], pinyin: "shíjiān", meaning: "Thời gian" },
+            { word: "时候", parts: ["时", "候"], pinyinParts: ["shí", "hou"], pinyin: "shíhou", meaning: "Lúc/Khi" },
+            { word: "以后", parts: ["以", "后"], pinyinParts: ["yǐ", "hòu"], pinyin: "yǐhòu", meaning: "Sau này/Sau khi" },
+            { word: "以前", parts: ["以", "前"], pinyinParts: ["yǐ", "qián"], pinyin: "yǐqián", meaning: "Trước đây/Trước khi" },
+            { word: "因为", parts: ["因", "为"], pinyinParts: ["yīn", "wèi"], pinyin: "yīnwèi", meaning: "Bởi vì" },
+            { word: "所以", parts: ["所", "以"], pinyinParts: ["suǒ", "yǐ"], pinyin: "suǒyǐ", meaning: "Cho nên" },
+            { word: "只要", parts: ["只", "要"], pinyinParts: ["zhǐ", "yào"], pinyin: "zhǐyào", meaning: "Chỉ cần" },
+            { word: "手表", parts: ["手", "表"], pinyinParts: ["shǒu", "biǎo"], pinyin: "shǒubiǎo", meaning: "Đồng hồ đeo tay" },
+            { word: "丈夫", parts: ["丈", "夫"], pinyinParts: ["zhàng", "fu"], pinyin: "zhàngfu", meaning: "Chồng" },
+            { word: "旁边", parts: ["旁", "边"], pinyinParts: ["páng", "biān"], pinyin: "pángbiān", meaning: "Bên cạnh" },
+            { word: "黑色", parts: ["黑", "色"], pinyinParts: ["hēi", "sè"], pinyin: "hēisè", meaning: "Màu đen" },
+            { word: "粉色", parts: ["粉", "色"], pinyinParts: ["fěn", "sè"], pinyin: "fěnsè", meaning: "Màu hồng" },
+            { word: "红色", parts: ["红", "色"], pinyinParts: ["hóng", "sè"], pinyin: "hóngsè", meaning: "Màu đỏ" },
+            { word: "绿色", parts: ["绿", "色"], pinyinParts: ["lǜ", "sè"], pinyin: "lǜsè", meaning: "Màu xanh lá" },
+            { word: "蓝色", parts: ["蓝", "色"], pinyinParts: ["lán", "sè"], pinyin: "lánsè", meaning: "Màu xanh dương" },
+            { word: "左边", parts: ["左", "边"], pinyinParts: ["zuǒ", "bian"], pinyin: "zuǒbian", meaning: "Bên trái" },
+            { word: "右边", parts: ["右", "边"], pinyinParts: ["yòu", "bian"], pinyin: "yòubian", meaning: "Bên phải" },
+            { word: "生日", parts: ["生", "日"], pinyinParts: ["shēng", "rì"], pinyin: "shēngrì", meaning: "Sinh nhật" },
+            { word: "快乐", parts: ["快", "乐"], pinyinParts: ["kuài", "lè"], pinyin: "kuàilè", meaning: "Vui vẻ/Hạnh phúc" },
+            { word: "非常", parts: ["非", "常"], pinyinParts: ["fēi", "cháng"], pinyin: "fēicháng", meaning: "Vô cùng/Rất" },
+            { word: "不太", parts: ["不", "太"], pinyinParts: ["bú", "tài"], pinyin: "bútài", meaning: "Không... lắm" },
+            { word: "开始", parts: ["开", "始"], pinyinParts: ["kāi", "shǐ"], pinyin: "kāishǐ", meaning: "Bắt đầu" },
+            { word: "多高", parts: ["多", "高"], pinyinParts: ["duō", "gāo"], pinyin: "duōgāo", meaning: "Cao bao nhiêu" },
+            { word: "多长", parts: ["多", "长"], pinyinParts: ["duō", "cháng"], pinyin: "duōcháng", meaning: "Dài bao nhiêu" },
+            { word: "前面", parts: ["前", "面"], pinyinParts: ["qián", "miàn"], pinyin: "qiánmiàn", meaning: "Phía trước" },
+            { word: "后面", parts: ["后", "面"], pinyinParts: ["hòu", "miàn"], pinyin: "hòumiàn", meaning: "Phía sau" },
+            { word: "里面", parts: ["里", "面"], pinyinParts: ["lǐ", "miàn"], pinyin: "lǐmiàn", meaning: "Bên trong" },
+            { word: "准备", parts: ["准", "备"], pinyinParts: ["zhǔn", "bèi"], pinyin: "zhǔnbèi", meaning: "Chuẩn bị" },
+            { word: "考试", parts: ["考", "试"], pinyinParts: ["kǎo", "shì"], pinyin: "kǎoshì", meaning: "Thi/Kiểm tra" },
+            { word: "出去", parts: ["出", "去"], pinyinParts: ["chū", "qù"], pinyin: "chūqù", meaning: "Đi ra ngoài" },
+            { word: "不错", parts: ["不", "错"], pinyinParts: ["bú", "cuò"], pinyin: "búcuò", meaning: "Không tồi/Tốt" },
+            { word: "意思", parts: ["意", "思"], pinyinParts: ["yì", "si"], pinyin: "yìsi", meaning: "Ý nghĩa" },
+            { word: "咖啡", parts: ["咖", "啡"], pinyinParts: ["kā", "fēi"], pinyin: "kāfēi", meaning: "Cà phê" },
+            { word: "奶茶", parts: ["奶", "茶"], pinyinParts: ["nǎi", "chá"], pinyin: "nǎichá", meaning: "Trà sữa" },
+            { word: "面条", parts: ["面", "条"], pinyinParts: ["miàn", "tiáo"], pinyin: "miàntiáo", meaning: "Mỳ sợi" },
+            { word: "鸡肉", parts: ["鸡", "肉"], pinyinParts: ["jī", "ròu"], pinyin: "jīròu", meaning: "Thịt gà" },
+            { word: "牛肉", parts: ["牛", "肉"], pinyinParts: ["niú", "ròu"], pinyin: "niúròu", meaning: "Thịt bò" },
+            { word: "烤鸭", parts: ["烤", "鸭"], pinyinParts: ["kǎo", "yā"], pinyin: "kǎoyā", meaning: "Vịt quay" },
+            { word: "火锅", parts: ["火", "锅"], pinyinParts: ["huǒ", "guō"], pinyin: "huǒguō", meaning: "Lẩu" },
+            { word: "经常", parts: ["经", "常"], pinyinParts: ["jīng", "cháng"], pinyin: "jīngcháng", meaning: "Thường xuyên" },
+            { word: "公斤", parts: ["公", "斤"], pinyinParts: ["gōng", "jīn"], pinyin: "gōngjīn", meaning: "Kg" },
+            { word: "姐姐", parts: ["姐", "姐"], pinyinParts: ["jiě", "jie"], pinyin: "jiějie", meaning: "Chị gái" },
+            { word: "爸爸", parts: ["爸", "爸"], pinyinParts: ["bà", "ba"], pinyin: "bàba", meaning: "Bố" },
+            { word: "哥哥", parts: ["哥", "哥"], pinyinParts: ["gē", "ge"], pinyin: "gēge", meaning: "Anh trai" },
+            { word: "弟弟", parts: ["弟", "弟"], pinyinParts: ["dì", "di"], pinyin: "dìdi", meaning: "Em trai" },
+            { word: "妹妹", parts: ["妹", "妹"], pinyinParts: ["mèi", "mei"], pinyin: "mèimei", meaning: "Em gái" },
+            { word: "奶奶", parts: ["奶", "奶"], pinyinParts: ["nǎi", "nai"], pinyin: "nǎinai", meaning: "Bà nội" },
+            { word: "爷爷", parts: ["爷", "爷"], pinyinParts: ["yé", "ye"], pinyin: "yéye", meaning: "Ông nội" },
+            { word: "公园", parts: ["公", "园"], pinyinParts: ["gōng", "yuán"], pinyin: "gōngyuán", meaning: "Công viên" },
+            { word: "教室", parts: ["教", "室"], pinyinParts: ["jiào", "shì"], pinyin: "jiàoshì", meaning: "Phòng học" },
+            { word: "机场", parts: ["机", "场"], pinyinParts: ["jī", "chǎng"], pinyin: "jīchǎng", meaning: "Sân bay" },
+            { word: "小时", parts: ["小", "时"], pinyinParts: ["xiǎo", "shí"], pinyin: "xiǎoshí", meaning: "Giờ/Tiếng" },
+            { word: "走路", parts: ["走", "路"], pinyinParts: ["zǒu", "lù"], pinyin: "zǒulù", meaning: "Đi bộ" }
+        ];
+
+        // Khởi tạo từ điển trên màn hình
+        function initDictionary() {
+            const container = document.getElementById('dict-container');
+            document.getElementById('total-dict-words').innerText = masterVocabulary.length;
+            masterVocabulary.forEach(item => {
+                let div = document.createElement('div');
+                div.className = 'dict-item';
+                div.innerHTML = `
+                    <span class="d-hanzi">${item.word}</span>
+                    <span class="d-pinyin">${item.pinyin}</span>
+                    <span class="d-meaning">${item.meaning}</span>
+                `;
+                container.appendChild(div);
+            });
+        }
+        
+        window.addEventListener('DOMContentLoaded', initDictionary);
+
+        function showDictionary() {
+            showScreen('screen-dictionary');
+        }
+
+        let gameState = {
+            currentRoundWords: [],
+            targetWords: [],
+            tiles: [],
+            selectedTiles: [],
+            score: 0,
+            combo: 0,
+            maxCombo: 0,
+            wrongCount: 0,
+            completedCount: 0,
+            timeLeft: 120,
+            timerId: null,
+            isPlaying: false,
+            isPaused: false,
+            showPinyin: true,
+            soundEnabled: true,
+            isChecking: false
+        };
+
+        const TILES_PER_ROUND = 10;
+        let unplayedWords = []; // Túi từ vựng chưa chơi
+
+        let audioCtx;
+        function initAudio() { if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+        function playTone(freq, type, duration, vol=0.1) {
+            if(!gameState.soundEnabled) return;
+            initAudio();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + duration);
+        }
+
+        const Sound = {
+            click: () => playTone(600, 'sine', 0.1, 0.1),
+            correct: () => {
+                playTone(523.25, 'triangle', 0.1, 0.2); 
+                setTimeout(() => playTone(659.25, 'triangle', 0.1, 0.2), 100); 
+                setTimeout(() => playTone(783.99, 'triangle', 0.2, 0.2), 200); 
+            },
+            wrong: () => {
+                playTone(200, 'sawtooth', 0.2, 0.2);
+                setTimeout(() => playTone(150, 'sawtooth', 0.2, 0.2), 100);
+            },
+            combo: () => {
+                playTone(880, 'square', 0.1, 0.1);
+                setTimeout(() => playTone(1046.5, 'square', 0.3, 0.2), 100);
+            },
+            win: () => {
+                [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => setTimeout(()=>playTone(f, 'triangle', 0.2, 0.3), i*150));
+            }
+        }
+
+        function toggleSound() {
+            gameState.soundEnabled = !gameState.soundEnabled;
+            const text = gameState.soundEnabled ? "🔊 Âm thanh" : "🔇 Tắt âm";
+            document.getElementById('btn-toggle-sound-home').innerText = text;
+        }
+
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+
+        function shuffle(array) {
+            let arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        function startGame() {
+            initAudio();
+            gameState.timeLeft = parseInt(document.getElementById('time-setting').value);
+            gameState.score = 0; gameState.combo = 0; gameState.maxCombo = 0;
+            gameState.wrongCount = 0; gameState.completedCount = 0;
+            gameState.selectedTiles = []; gameState.isPlaying = true; gameState.isPaused = false;
+            
+            updateHUD();
+            
+            // THUẬT TOÁN CHỐNG LẶP TUYỆT ĐỐI
+            // Nếu túi từ vựng cạn kiệt, xáo trộn lại toàn bộ Master List đưa vào túi
+            if (unplayedWords.length < TILES_PER_ROUND) {
+                unplayedWords = shuffle([...masterVocabulary]);
+            }
+            
+            // Rút X từ trong túi ra để chơi màn này (không bao giờ trùng cho đến khi hết túi)
+            gameState.currentRoundWords = unplayedWords.splice(0, TILES_PER_ROUND);
+            gameState.targetWords = gameState.currentRoundWords.map(w => w.word);
+            
+            renderTiles();
+            showScreen('screen-game');
+            
+            clearInterval(gameState.timerId);
+            gameState.timerId = setInterval(timerTick, 1000);
+        }
+
+        function renderTiles() {
+            const board = document.getElementById('board');
+            board.innerHTML = '';
+            
+            let tilesData = [];
+            gameState.currentRoundWords.forEach((wordObj, index) => {
+                tilesData.push({ id: `w${index}_0`, char: wordObj.parts[0], py: wordObj.pinyinParts[0], wordIndex: index });
+                tilesData.push({ id: `w${index}_1`, char: wordObj.parts[1], py: wordObj.pinyinParts[1], wordIndex: index });
+            });
+            
+            tilesData = shuffle(tilesData);
+            
+            tilesData.forEach(tile => {
+                let div = document.createElement('div');
+                div.className = 'tile';
+                div.id = tile.id;
+                div.dataset.char = tile.char;
+                div.dataset.wordIndex = tile.wordIndex; 
+                div.innerHTML = `<span class="tile-hanzi">${tile.char}</span>`;
+                div.onclick = () => handleTileClick(div);
+                board.appendChild(div);
+            });
+        }
+
+        function handleTileClick(tileDiv) {
+            if (!gameState.isPlaying || gameState.isPaused || gameState.isChecking) return;
+            if (tileDiv.classList.contains('correct') || tileDiv.classList.contains('selected')) return;
+
+            Sound.click();
+            tileDiv.classList.remove('hinted');
+            tileDiv.classList.add('selected');
+            gameState.selectedTiles.push(tileDiv);
+
+            if (gameState.selectedTiles.length === 2) {
+                gameState.isChecking = true;
+                checkPair();
+            }
+        }
+
+        function checkPair() {
+            const t1 = gameState.selectedTiles[0];
+            const t2 = gameState.selectedTiles[1];
+            
+            const char1 = t1.dataset.char;
+            const char2 = t2.dataset.char;
+            
+            const wordFwd = char1 + char2;
+            const wordRev = char2 + char1;
+            
+            let matchedWordStr = null;
+            if (gameState.targetWords.includes(wordFwd)) matchedWordStr = wordFwd;
+            else if (gameState.targetWords.includes(wordRev)) matchedWordStr = wordRev;
+
+            if (matchedWordStr) {
+                handleCorrectPair(t1, t2, matchedWordStr);
+            } else {
+                handleWrongPair(t1, t2);
+            }
+        }
+
+        function handleCorrectPair(t1, t2, wordStr) {
+            t1.classList.remove('selected'); t2.classList.remove('selected');
+            t1.classList.add('correct'); t2.classList.add('correct');
+            
+            gameState.completedCount++;
+            gameState.combo++;
+            if (gameState.combo > gameState.maxCombo) gameState.maxCombo = gameState.combo;
+            
+            let points = 100;
+            if (gameState.combo >= 5) { points += 100; Sound.combo(); }
+            else if (gameState.combo >= 3) { points += 50; Sound.combo(); }
+            else { Sound.correct(); }
+            
+            gameState.score += points;
+            
+            setTimeout(() => {
+                t1.style.visibility = 'hidden';
+                t2.style.visibility = 'hidden';
+            }, 500);
+
+            const wordObj = gameState.currentRoundWords.find(w => w.word === wordStr);
+            showToast(wordObj.word, wordObj.pinyin, wordObj.meaning);
+            showFloatingScore(`+${points}`, t2);
+
+            updateHUD();
+            gameState.selectedTiles = [];
+            gameState.isChecking = false;
+
+            if (gameState.completedCount === TILES_PER_ROUND) {
+                setTimeout(endGame, 800);
+            }
+        }
+
+        function handleWrongPair(t1, t2) {
+            t1.classList.remove('selected'); t2.classList.remove('selected');
+            t1.classList.add('wrong'); t2.classList.add('wrong');
+            
+            gameState.wrongCount++;
+            gameState.combo = 0;
+            Sound.wrong();
+            updateHUD();
+
+            setTimeout(() => {
+                t1.classList.remove('wrong');
+                t2.classList.remove('wrong');
+                gameState.selectedTiles = [];
+                gameState.isChecking = false;
+            }, 500);
+        }
+
+        function useHint() {
+            if (!gameState.isPlaying || gameState.isPaused || gameState.isChecking) return;
+            
+            const availableTiles = Array.from(document.querySelectorAll('.tile:not(.correct)'));
+            if (availableTiles.length < 2) return;
+
+            const targetWordIndex = availableTiles[0].dataset.wordIndex;
+            const pairToHint = availableTiles.filter(t => t.dataset.wordIndex === targetWordIndex);
+            
+            if (pairToHint.length === 2) {
+                pairToHint.forEach(t => t.classList.add('hinted'));
+                gameState.score = Math.max(0, gameState.score - 10);
+                updateHUD();
+            }
+        }
+
+        function showToast(hanzi, pinyin, meaning) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-hz').innerText = hanzi;
+            document.getElementById('toast-py').innerText = pinyin;
+            document.getElementById('toast-vi').innerText = meaning;
+            
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 1500);
+        }
+
+        function showFloatingScore(text, el) {
+            const rect = el.getBoundingClientRect();
+            const floatEl = document.createElement('div');
+            floatEl.className = 'floating-score';
+            floatEl.innerText = text;
+            floatEl.style.left = (rect.left + rect.width/2 - 20) + 'px';
+            floatEl.style.top = (rect.top - 20) + 'px';
+            document.body.appendChild(floatEl);
+            setTimeout(() => floatEl.remove(), 1000);
+        }
+
+        function timerTick() {
+            if (gameState.isPaused || !gameState.isPlaying) return;
+            gameState.timeLeft--;
+            updateHUD();
+            if (gameState.timeLeft <= 0) endGame();
+        }
+
+        function updateHUD() {
+            document.getElementById('ui-score').innerText = gameState.score;
+            document.getElementById('ui-combo').innerText = gameState.combo;
+            document.getElementById('ui-progress').innerText = `${gameState.completedCount}/${TILES_PER_ROUND}`;
+            
+            const timeEl = document.getElementById('ui-time');
+            let m = Math.floor(gameState.timeLeft / 60);
+            let s = gameState.timeLeft % 60;
+            timeEl.innerText = `${m}:${s < 10 ? '0'+s : s}`;
+        }
+
+        function togglePause() {
+            if (!gameState.isPlaying) return;
+            gameState.isPaused = !gameState.isPaused;
+            document.getElementById('pause-overlay').style.display = gameState.isPaused ? 'flex' : 'none';
+        }
+
+        function quitGame() {
+            clearInterval(gameState.timerId);
+            gameState.isPlaying = false;
+            document.getElementById('pause-overlay').style.display = 'none';
+            showScreen('screen-home');
+        }
+
+        function endGame() {
+            clearInterval(gameState.timerId);
+            gameState.isPlaying = false;
+            Sound.win();
+
+            const isWin = gameState.completedCount === TILES_PER_ROUND;
+            document.getElementById('res-title').innerText = isWin ? "太棒了！Tuyệt vời!" : "时间到！Hết giờ!";
+            document.getElementById('res-msg').innerText = isWin ? "Cao thủ từ vựng xuất hiện rồi!" : "Tiếp tục cố gắng nhé!";
+            
+            document.getElementById('res-score').innerText = gameState.score;
+            document.getElementById('res-wrong').innerText = gameState.wrongCount;
+            document.getElementById('res-max-combo').innerText = gameState.maxCombo;
+            let acc = Math.round((gameState.completedCount / TILES_PER_ROUND) * 100);
+            document.getElementById('res-acc').innerText = acc + "%";
+
+            const listEl = document.getElementById('review-list');
+            listEl.innerHTML = '';
+            gameState.currentRoundWords.forEach(w => {
+                let div = document.createElement('div');
+                div.className = 'review-item';
+                div.innerHTML = `
+                    <div><span class="r-hanzi">${w.word}</span> <span class="r-pinyin">${w.pinyin}</span></div>
+                    <div class="r-meaning">${w.meaning}</div>
+                `;
+                listEl.appendChild(div);
+            });
+
+            showScreen('screen-result');
+        }
+
+    </script>
+</body>
+</html>
